@@ -9,9 +9,9 @@ def total_seconds(td):
         return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
 
 def convert_to_epoch(timestamp):
-        if (type(timestamp) is datetime.date):
-            timestamp = datetime.datetime.fromordinal(timestamp.toordinal())
-        timestamp = timestamp.replace(tzinfo=None)
-	diff = (timestamp - datetime.datetime(1970, 1, 1))
-	seconds = int(total_seconds(diff))
-	return seconds
+    if (type(timestamp) is datetime.date):
+        timestamp = datetime.datetime.fromordinal(timestamp.toordinal())
+    timestamp = timestamp.replace(tzinfo=None)
+    diff = (timestamp - datetime.datetime(1970, 1, 1))
+    seconds = int(total_seconds(diff))
+    return seconds

@@ -2,6 +2,7 @@ from api.util import settings
 import contextlib
 import sqlite3
 import json
+import os
 
 class RedisStatsProvider(object):
     """A Sqlite based persistance to store and fetch stats
@@ -9,7 +10,10 @@ class RedisStatsProvider(object):
 
     def __init__(self):
         stats = settings.get_sqlite_stats_store()
-        self.location = stats.get('path', 'db/redislive.sqlite')
+        default_path = os.path.join(os.path.dirname(__file__), '../db/redislive.sqlite')
+
+        self.location = stats.get('path', default_path)
+        print(self.location)
         self.conn = sqlite3.connect(self.location)
         self.retries = 10
 
@@ -72,8 +76,15 @@ class RedisStatsProvider(object):
         with contextlib.closing(self.conn.cursor()) as c:
             query = "SELECT info FROM info WHERE server=?"
             query += "ORDER BY datetime DESC LIMIT 1;"
-            for r in c.execute(query, (server,)):
-                return(json.loads(r[0]))
+            result = c.execute(query, (server,)).fetchone()
+            if result is None or result[0] is None:
+                return {} 
+            return json.loads(result[0])
+        
+            # query = "SELECT info FROM info WHERE server=?"
+            # query += "ORDER BY datetime DESC LIMIT 1;"
+            # for r in c.execute(query, (server,)):
+            #     return(json.loads(r[0]))
 
     def get_memory_info(self, server, from_date, to_date):
         """Get stats for Memory Consumption between a range of dates

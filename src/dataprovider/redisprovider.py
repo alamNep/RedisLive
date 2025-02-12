@@ -27,7 +27,13 @@ class RedisStatsProvider(object):
         data = {"timestamp": str(timeutils.convert_to_epoch(timestamp)),
                 "used": used,
                 "peak": peak}
-        self.conn.zadd(server + ":memory", str(timeutils.convert_to_epoch(timestamp)), data)
+        
+        member = json.dumps(data)
+        # Get the score as a numeric value (typically the epoch time)
+        score = timeutils.convert_to_epoch(timestamp)
+        # Pass a mapping: {member: score}
+        self.conn.zadd(server + ":memory", {member: score})
+        # self.conn.zadd(server + ":memory", str(timeutils.convert_to_epoch(timestamp)), data)
 
     def save_info_command(self, server, timestamp, info):
         """Save Redis info command dump
@@ -39,7 +45,59 @@ class RedisStatsProvider(object):
         """
         self.conn.set(server + ":Info", json.dumps(info))
 
-    def save_monitor_command(self, server, timestamp, command, keyname,
+    def save_monitor_command(self, server, timestamp, command, keyname, argument):
+        """Save information about every command.
+
+        Args:
+            server (str): Server ID
+            timestamp (datetime): Timestamp.
+            command (str): The Redis command used.
+            keyname (str): The key the command acted on.
+            argument (str): The args sent to the command.
+        """
+        epoch = str(timeutils.convert_to_epoch(timestamp))
+        current_date = timestamp.strftime('%y%m%d')
+
+        # start a redis MULTI/EXEC transaction
+        pipeline = self.conn.pipeline()
+
+        # store top command and key counts in sorted set for every second
+        # top N are easily available from sorted set in redis
+        # also keep a sorted set for every day
+        # switch to daily stats when stats requested are for a longer time period        
+
+        command_count_key = server + ":CommandCount:" + epoch
+        pipeline.zincrby(command_count_key, 1, command)
+
+        command_count_key = server + ":DailyCommandCount:" + current_date
+        pipeline.zincrby(command_count_key, 1, command)
+
+        key_count_key = server + ":KeyCount:" + epoch
+        pipeline.zincrby(key_count_key, 1, keyname)
+
+        key_count_key = server + ":DailyKeyCount:" + current_date
+        pipeline.zincrby(key_count_key, 1, keyname)
+            
+        # keep aggregate command in a hash
+        command_count_key = server + ":CommandCountBySecond"
+        pipeline.hincrby(command_count_key, epoch, 1)
+
+        command_count_key = server + ":CommandCountByMinute"
+        field_name = current_date + ":" + str(timestamp.hour) + ":" + str(timestamp.minute)
+        pipeline.hincrby(command_count_key, field_name, 1)
+
+        command_count_key = server + ":CommandCountByHour"
+        field_name = current_date + ":" + str(timestamp.hour)
+        pipeline.hincrby(command_count_key, field_name, 1)
+
+        command_count_key = server + ":CommandCountByDay"
+        field_name = current_date
+        pipeline.hincrby(command_count_key, field_name, 1)
+
+        # commit transaction to redis
+        pipeline.execute()
+
+    def save_monitor_command2(self, server, timestamp, command, keyname,
                              argument):
         """save information about every command
 
@@ -63,33 +121,49 @@ class RedisStatsProvider(object):
         # switch to daily stats when stats requsted are for a longer time period        
 
         command_count_key = server + ":CommandCount:" + epoch
-        pipeline.zincrby(command_count_key, command, 1)
+        # pipeline.zincrby(command_count_key, {command: 1})
+        pipeline.zincrby(command_count_key, 1, command)
+
 
         command_count_key = server + ":DailyCommandCount:" + current_date
-        pipeline.zincrby(command_count_key, command, 1)
+        # pipeline.zincrby(command_count_key, {command: 1})
+        pipeline.zincrby(command_count_key, 1, command)
+
 
         key_count_key = server + ":KeyCount:" + epoch
-        pipeline.zincrby(key_count_key, keyname, 1)
+        # pipeline.zincrby(key_count_key, {keyname: 1})
+        pipeline.zincrby(key_count_key, 1, keyname)
+
 
         key_count_key = server + ":DailyKeyCount:" + current_date
-        pipeline.zincrby(key_count_key, keyname, 1)
+        # pipeline.zincrby(key_count_key, {keyname: 1})
+
+        pipeline.zincrby(key_count_key, 1, keyname)
+        
 
         # keep aggregate command in a hash
         command_count_key = server + ":CommandCountBySecond"
-        pipeline.hincrby(command_count_key, epoch, 1)
+        pipeline.hincrby(command_count_key, {epoch: 1})
 
         command_count_key = server + ":CommandCountByMinute"
         field_name = current_date + ":" + str(timestamp.hour) + ":"
         field_name += str(timestamp.minute)
-        pipeline.hincrby(command_count_key, field_name, 1)
+        # pipeline.hincrby(command_count_key, field_name, 1)
+
+        pipeline.hincrby(command_count_key, {field_name: 1})
 
         command_count_key = server + ":CommandCountByHour"
         field_name = current_date + ":" + str(timestamp.hour)
-        pipeline.hincrby(command_count_key, field_name, 1)
+        # pipeline.hincrby(command_count_key, field_name, 1)
+
+        pipeline.hincrby(command_count_key, {field_name: 1})
+        
 
         command_count_key = server + ":CommandCountByDay"
         field_name = current_date
-        pipeline.hincrby(command_count_key, field_name, 1)
+        # pipeline.hincrby(command_count_key, field_name, 1)
+
+        pipeline.hincrby(command_count_key, {field_name: 1})
 
         # commit transaction to redis
         pipeline.execute()
@@ -186,7 +260,7 @@ class RedisStatsProvider(object):
 
         data = []
         counts = self.conn.hmget(key_name, s)
-        for x in xrange(0,len(counts)):
+        for x in range(0,len(counts)):
             # the default time format string
             time_fmt = '%Y-%m-%d %H:%M:%S'
 

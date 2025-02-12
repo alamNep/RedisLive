@@ -2,22 +2,22 @@
 	"RedisServers":
 	[ 
 		{
-  			"server": "154.17.59.99",
+  			"server": "127.0.0.1",
   			"port" : 6379
 		},
 		
 		{
   			"server": "localhost",
-  			"port" : 6380,
-  			"password" : "some-password"
+  			"port" : 6379,
+  			"password" : "****"
 		}		
 	],
 
-	"DataStoreType" : "redis",
+	"DataStoreType" : "sqlite",
 
 	"RedisStatsServer":
 	{
-		"server" : "ec2-184-72-166-144.compute-1.amazonaws.com",
+		"server" : "127.0.0.1",
 		"port" : 6385
 	},
 	

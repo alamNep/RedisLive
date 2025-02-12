@@ -102,6 +102,8 @@ class MonitorThread(threading.Thread):
 
         for command in commands:
             try:
+                if isinstance(command, bytes):
+                    command = command.decode("utf-8")
                 parts = command.split(" ")
 
                 if len(parts) == 1:
@@ -125,7 +127,7 @@ class MonitorThread(threading.Thread):
                     # TODO: This is probably more efficient as a list
                     # comprehension wrapped in " ".join()
                     arguments = ""
-                    for x in xrange(3, len(parts)):
+                    for x in range(3, len(parts)):
                         arguments += " " + parts[x].replace('"', '')
                     arguments = arguments.strip()
                 else:
@@ -138,13 +140,13 @@ class MonitorThread(threading.Thread):
                                                         str(keyname), 
                                                         str(arguments))
 
-            except Exception, e:
+            except Exception:
                 tb = traceback.format_exc()
-                print "==============================\n"
-                print datetime.datetime.now()
-                print tb
-                print command
-                print "==============================\n"
+                print ("==============================\n")
+                print (datetime.datetime.now())
+                print (tb)
+                print (command)
+                print ("==============================\n")
 
             if self.stopped():
                 break
@@ -224,12 +226,12 @@ class InfoThread(threading.Thread):
 
                 time.sleep(1)
 
-            except Exception, e:
+            except Exception:
                 tb = traceback.format_exc()
-                print "==============================\n"
-                print datetime.datetime.now()
-                print tb
-                print "==============================\n"
+                print ("==============================\n")
+                print (datetime.datetime.now())
+                print (tb)
+                print ("==============================\n")
 
 class RedisMonitor(object):
 
@@ -253,29 +255,29 @@ class RedisMonitor(object):
 
             monitor = MonitorThread(redis_server["server"], redis_server["port"], redis_password)
             self.threads.append(monitor)
-            monitor.setDaemon(True)
+            monitor.daemon = True
             monitor.start()
 
             info = InfoThread(redis_server["server"], redis_server["port"], redis_password)
             self.threads.append(info)
-            info.setDaemon(True)
+            info.daemon = True
             info.start()
 
-        t = Timer(duration, self.stop)
-        t.start()
+        # t = Timer(duration, self.stop)
+        # t.start()
 
         try:
             while self.active:
                 time.sleep(1)
         except (KeyboardInterrupt, SystemExit):
             self.stop()
-            t.cancel()
+            # t.cancel()
 
     def stop(self):
         """Stops the monitor and all associated threads.
         """
         if args.quiet==False:
-            print "shutting down..."
+            print ("shutting down...")
         for t in self.threads:
                 t.stop()
         self.active = False
@@ -286,7 +288,7 @@ if __name__ == '__main__':
     parser.add_argument('--duration',
                         type=int,
                         help="duration to run the monitor command (in seconds)",
-                        required=True)
+                        required=False)
     parser.add_argument('--quiet',
                         help="do  not write anything to standard output",
                         required=False,
