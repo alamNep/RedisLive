@@ -224,7 +224,7 @@ class InfoThread(threading.Thread):
 
                 # stats_provider.SaveKeysInfo(self.id, current_time, expires, persists)
 
-                time.sleep(1)
+                time.sleep(60)
 
             except Exception:
                 tb = traceback.format_exc()
@@ -268,7 +268,7 @@ class RedisMonitor(object):
 
         try:
             while self.active:
-                time.sleep(1)
+                time.sleep(60)
         except (KeyboardInterrupt, SystemExit):
             self.stop()
             # t.cancel()

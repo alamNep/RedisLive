@@ -2,7 +2,7 @@ from .BaseController import BaseController
 import tornado.ioloop
 import tornado.web
 import dateutil.parser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class CommandsController(BaseController):
@@ -15,7 +15,9 @@ class CommandsController(BaseController):
         server = self.get_argument("server")
         from_date = self.get_argument("from", None)
         to_date = self.get_argument("to", None)
+        
 
+        print(from_date, to_date)
         if not from_date or not to_date:
             end = datetime.now()
             delta = timedelta(seconds=120)
@@ -23,6 +25,7 @@ class CommandsController(BaseController):
         else:
             start = dateutil.parser.parse(from_date)
             end = dateutil.parser.parse(to_date)
+        print(start, end)
 
         difference = end - start
         # added to support python version < 2.7, otherwise timedelta has
@@ -43,6 +46,17 @@ class CommandsController(BaseController):
           group_by = "minute"
         else:
           group_by = "second"
+        
+
+        utc9 = timezone(timedelta(hours=9))
+        dt1_utc9 = start.replace(tzinfo=utc9)
+        dt2_utc9 = end.replace(tzinfo=utc9)
+
+        dt1_utc = dt1_utc9.astimezone(timezone.utc)
+        dt2_utc = dt2_utc9.astimezone(timezone.utc)
+
+        start = dt1_utc
+        end = dt2_utc
 
         combined_data = []
         stats = self.stats_provider.get_command_stats(server, start, end,

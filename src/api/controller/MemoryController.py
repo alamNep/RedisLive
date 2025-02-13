@@ -22,7 +22,17 @@ class MemoryController(BaseController):
         else:
             start = dateutil.parser.parse(from_date)
             end   = dateutil.parser.parse(to_date)
+        
+        utc9 = datetime.timezone(datetime.timedelta(hours=9))
+        dt1_utc9 = start.replace(tzinfo=utc9)
+        dt2_utc9 = end.replace(tzinfo=utc9)
 
+        dt1_utc = dt1_utc9.astimezone(datetime.timezone.utc)
+        dt2_utc = dt2_utc9.astimezone(datetime.timezone.utc)
+
+        start = dt1_utc
+        end = dt2_utc
+        
         combined_data = []
         # TODO: These variables aren't currently used; should they be removed?
         prev_max=0
